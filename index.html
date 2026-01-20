@@ -41,12 +41,12 @@
             margin-bottom: 20px;
         }
 
-        /* 技能展示区域 */
-        .skill-list {
+        /* 战备展示区域 */
+        .readiness-list {
             margin: 20px 0;
         }
 
-        .skill-item {
+        .readiness-item {
             padding: 18px;
             background: #f8f8f8;
             border-radius: 8px;
@@ -79,117 +79,162 @@
         <!-- 生成次数统计 -->
         <div class="count">已生成次数：<span id="generateCount">0</span></div>
 
-        <!-- 技能展示区域 -->
-        <div class="skill-list" id="skillList"></div>
+        <!-- 战备展示区域 -->
+        <div class="readiness-list" id="readinessList"></div>
 
         <!-- 生成按钮 -->
-        <button onclick="generateSkills()">生成</button>
+        <button onclick="generateReadiness()">生成新战备</button>
     </div>
 
     <script>
         // 全局变量：生成次数（刷新页面重置为0）
         let generateCount = 0;
-        // 技能池：你可以自行修改/添加技能
-        const skillPool = [
-    '轨道精准',
-    '轨道加特林',
-    '轨道空爆',
-    '轨道火',
-    '120',
-    '380',
-    '轨道游走',
-    '轨道炮',
-    '轨道激光',
-    '轨道电磁',
-    '轨道毒',
-    '轨道烟',
-    '500',
-    '飞鹰机枪',
-    '飞鹰空袭',
-    '110',
-    '飞鹰集束',
-    '飞鹰火',
-    '飞鹰烟',
-    '除叶工具',
-    '超级地球国旗',
-    '机枪',
-    '盟友',
-    '重机枪',
-    '磁轨炮',
-    '毒矛',
-    '反器材步枪',
-    '纪元',
-    '榴弹发射器',
-    '电榴弹',
-    '灭菌器',
-    '喷火器',
-    '激光笔',
-    '类星体',
-    '电弧发射器',
-    '突击兵',
-    '飞矛',
-    '无后座',
-    '次抛',
-    '单兵导弹',
-    '火次抛',
-    '重装机枪',
-    '补包',
-    '地狱火',
-    '传送背包',
-    '悬浮背包',
-    '喷射背包',
-    '防护罩包',
-    '定向护盾',
-    '防弹护盾背包',
-    '电狗',
-    '毒狗',
-    '火狗',
-    '实弹狗',
-    '激光狗',
-    '车',
-    '机炮装甲',
-    '火箭炮装甲',
-    '小加特林炮台',
-    '大加特林炮台',
-    '喷火炮台',
-    '激光炮台',
-    '火箭炮台',
-    '哨戒炮台',
-    '电磁迫击炮',
-    '哨戒迫击炮',
-    '防护罩生成器',
-    '防卫墙',
-    'at炮台',
-    '重机枪部署支架',
-    '电塔',
-    '反坦克地雷',
-    '反步兵地雷',
-    '燃烧地雷',
-    '毒气地雷'
-];
+        // 战备池：完整列表
+        const readinessPool = [
+            '轨道精准',
+            '轨道加特林',
+            '轨道空爆',
+            '轨道火',
+            '120',
+            '380',
+            '轨道游走',
+            '轨道炮',
+            '轨道激光',
+            '轨道电磁',
+            '轨道毒',
+            '轨道烟',
+            '500',
+            '飞鹰机枪',
+            '飞鹰空袭',
+            '110',
+            '飞鹰集束',
+            '飞鹰火',
+            '飞鹰烟',
+            '除叶工具',
+            '超级地球国旗',
+            '机枪',
+            '盟友',
+            '重机枪',
+            '磁轨炮',
+            '毒矛',
+            '反器材步枪',
+            '纪元',
+            '榴弹发射器',
+            '电榴弹',
+            '灭菌器',
+            '喷火器',
+            '激光笔',
+            '类星体',
+            '电弧发射器',
+            '突击兵',
+            '飞矛',
+            '无后座',
+            '空爆',
+            '次抛',
+            '单兵导弹',
+            '火次抛',
+            '重装机枪',
+            '补包',
+            '地狱火',
+            '传送背包',
+            '悬浮背包',
+            '喷射背包',
+            '防护罩包',
+            '定向护盾',
+            '防弹护盾背包',
+            '电狗',
+            '毒狗',
+            '火狗',
+            '实弹狗',
+            '激光狗',
+            '车',
+            '机炮装甲',
+            '火箭炮装甲',
+            '小加特林炮台',
+            '大加特林炮台',
+            '喷火炮台',
+            '激光炮台',
+            '火箭炮台',
+            '哨戒炮台',
+            '电磁迫击炮',
+            '哨戒迫击炮',
+            '防护罩生成器',
+            '防卫墙',
+            'at炮台',
+            '重机枪部署支架',
+            '电塔',
+            '反坦克地雷',
+            '反步兵地雷',
+            '燃烧地雷',
+            '毒气地雷'
+        ];
+
+        // 定义互斥组（核心：同一组内的战备不能同时出现在结果中）
+        const exclusiveGroups = [
+            // 第一组：武器类互斥
+            ['除叶工具', '超级地球国旗', '机枪', '盟友', '重机枪', '磁轨炮', '毒矛', '反器材步枪', '纪元', '榴弹发射器', '电榴弹', '灭菌器', '喷火器', '激光笔', '类星体', '电弧发射器', '飞矛', '无后座', '空爆', '重装机枪'],
+            // 第二组：道具/宠物类互斥
+            ['补包', '地狱火', '传送背包', '悬浮背包', '喷射背包', '防护罩包', '定向护盾', '防弹护盾背包', '电狗', '毒狗', '火狗', '实弹狗', '激光狗'],
+            // 第三组：装甲类互斥
+            ['机炮装甲', '火箭炮装甲'],
+            // 第四组：道具+武器子类互斥
+            ['飞矛', '无后座', '空爆', '重装机枪', '补包', '地狱火', '传送背包', '悬浮背包', '喷射背包', '防护罩包', '定向护盾', '防弹护盾背包', '电狗', '毒狗', '火狗', '实弹狗', '激光狗']
+        ];
 
         // 页面加载初始化
         window.onload = function() {
-            updateCount(); // 初始化次数显示
+            updateCount();
         };
 
-        // 核心功能：生成随机技能
-        function generateSkills() {
-            // 随机打乱技能池，取前4个（不重复）
-            const shuffled = [...skillPool].sort(() => 0.5 - Math.random());
-            const selectedSkills = shuffled.slice(0, 4);
-            
-            // 渲染技能到页面
-            const skillList = document.getElementById('skillList');
-            skillList.innerHTML = '';
-            selectedSkills.forEach(skill => {
+        // 核心功能：生成随机战备（修复互斥逻辑）
+        function generateReadiness() {
+            let selectedReadiness = [];
+            let tempPool = [...readinessPool]; // 临时战备池
+
+            // 循环选4个不违反互斥规则的战备
+            while (selectedReadiness.length < 4 && tempPool.length > 0) {
+                // 随机选一个战备
+                const randomIndex = Math.floor(Math.random() * tempPool.length);
+                const candidate = tempPool[randomIndex];
+
+                // 检查：候选战备是否与已选的违反互斥规则
+                let isConflict = false;
+                for (let group of exclusiveGroups) {
+                    // 如果候选在当前互斥组，且已选列表中已有该组的其他战备 → 冲突
+                    if (group.includes(candidate)) {
+                        const hasExclusiveInSelected = selectedReadiness.some(item => group.includes(item) && item !== candidate);
+                        if (hasExclusiveInSelected) {
+                            isConflict = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 无冲突则加入结果，有冲突则从临时池移除（不再选）
+                if (!isConflict) {
+                    selectedReadiness.push(candidate);
+                }
+                tempPool.splice(randomIndex, 1); // 移除已检查的候选，避免重复选
+            }
+
+            // 兜底：如果临时池空了还没选够4个（极端情况），补全剩余数量
+            if (selectedReadiness.length < 4) {
+                const remaining = 4 - selectedReadiness.length;
+                const restPool = [...readinessPool].filter(item => !selectedReadiness.includes(item));
+                selectedReadiness = selectedReadiness.concat(restPool.slice(0, remaining));
+            }
+
+            // 渲染战备到页面
+            const readinessList = document.getElementById('readinessList');
+            readinessList.innerHTML = '';
+            selectedReadiness.forEach(readiness => {
                 const item = document.createElement('div');
-                item.className = 'skill-item';
-                item.textContent = skill;
-                skillList.appendChild(item);
+                item.className = 'readiness-item';
+                item.textContent = readiness;
+                readinessList.appendChild(item);
             });
 
-            // 更新生成次数并显示
+            // 更新生成次数
             generateCount++;
             updateCount();
         }
@@ -200,5 +245,4 @@
         }
     </script>
 </body>
-
 </html>
