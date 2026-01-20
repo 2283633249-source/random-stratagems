@@ -41,18 +41,29 @@
             margin-bottom: 20px;
         }
 
-        /* 战备展示区域 */
+        /* 战备展示区域 - 按颜色分类样式 */
         .readiness-list {
             margin: 20px 0;
         }
 
         .readiness-item {
             padding: 18px;
-            background: #f8f8f8;
             border-radius: 8px;
             margin-bottom: 12px;
             font-size: 20px;
             text-align: center;
+            color: white;
+        }
+
+        /* 红/蓝/绿战备样式 */
+        .red {
+            background: #e53e3e;
+        }
+        .blue {
+            background: #3182ce;
+        }
+        .green {
+            background: #38a169;
         }
 
         /* 按钮样式 */
@@ -89,147 +100,171 @@
     <script>
         // 全局变量：生成次数（刷新页面重置为0）
         let generateCount = 0;
-        // 战备池：完整列表
-        const readinessPool = [
-            '轨道精准',
-            '轨道加特林',
-            '轨道空爆',
-            '轨道火',
-            '120',
-            '380',
-            '轨道游走',
-            '轨道炮',
-            '轨道激光',
-            '轨道电磁',
-            '轨道毒',
-            '轨道烟',
-            '500',
-            '飞鹰机枪',
-            '飞鹰空袭',
-            '110',
-            '飞鹰集束',
-            '飞鹰火',
-            '飞鹰烟',
-            '除叶工具',
-            '超级地球国旗',
-            '机枪',
-            '盟友',
-            '重机枪',
-            '磁轨炮',
-            '毒矛',
-            '反器材步枪',
-            '纪元',
-            '榴弹发射器',
-            '电榴弹',
-            '灭菌器',
-            '喷火器',
-            '激光笔',
-            '类星体',
-            '电弧发射器',
-            '突击兵',
-            '飞矛',
-            '无后座',
-            '空爆',
-            '次抛',
-            '单兵导弹',
-            '火次抛',
-            '重装机枪',
-            '补包',
-            '地狱火',
-            '传送背包',
-            '悬浮背包',
-            '喷射背包',
-            '防护罩包',
-            '定向护盾',
-            '防弹护盾背包',
-            '电狗',
-            '毒狗',
-            '火狗',
-            '实弹狗',
-            '激光狗',
-            '车',
-            '机炮装甲',
-            '火箭炮装甲',
-            '小加特林炮台',
-            '大加特林炮台',
-            '喷火炮台',
-            '激光炮台',
-            '火箭炮台',
-            '哨戒炮台',
-            '电磁迫击炮',
-            '哨戒迫击炮',
-            '防护罩生成器',
-            '防卫墙',
-            'at炮台',
-            '重机枪部署支架',
-            '电塔',
-            '反坦克地雷',
-            '反步兵地雷',
-            '燃烧地雷',
-            '毒气地雷'
-        ];
 
-        // 定义互斥组（核心：同一组内的战备不能同时出现在结果中）
+        // 1. 战备分类定义（红/蓝/绿）
+        const readinessCategories = {
+            red: [
+                '轨道精准', '轨道加特林', '轨道空爆', '轨道火', '120', '380',
+                '轨道游走', '轨道炮', '轨道激光', '轨道电磁', '轨道毒', '轨道烟',
+                '500', '飞鹰机枪', '飞鹰空袭', '110', '飞鹰集束', '飞鹰火', '飞鹰烟'
+            ],
+            blue: [
+                '除叶工具', '超级地球国旗', '机枪', '盟友', '重机枪', '磁轨炮', '毒矛',
+                '反器材步枪', '纪元', '榴弹发射器', '电榴弹', '灭菌器', '喷火器',
+                '激光笔', '类星体', '电弧发射器', '突击兵', '飞矛', '无后座', '空爆',
+                '重装机枪', '次抛', '单兵导弹', '火次抛', '补包', '地狱火', '传送背包',
+                '悬浮背包', '喷射背包', '防护罩包', '定向护盾', '防弹护盾背包', '电狗',
+                '毒狗', '火狗', '实弹狗', '激光狗', '车', '机炮装甲', '火箭炮装甲'
+            ],
+            green: [
+                '小加特林炮台', '大加特林炮台', '喷火炮台', '激光炮台', '火箭炮台',
+                '哨戒炮台', '电磁迫击炮', '哨戒迫击炮', '防护罩生成器', '防卫墙',
+                'at炮台', '重机枪部署支架', '电塔', '反坦克地雷', '反步兵地雷',
+                '燃烧地雷', '毒气地雷'
+            ]
+        };
+
+        // 2. 优先级定义（权重：高=3，中=2，低=1）
+        const priorityWeights = {
+            high: [
+                '反步兵地雷', '电弧发射器', '突击兵', '喷火器', '火次抛', '轨道毒',
+                '轨道空爆', '轨道精准', '机枪', '重机枪', '燃烧地雷', '喷火炮台',
+                '激光炮台', '激光狗', '空爆', '车', '电塔', '飞鹰火', '飞鹰集束',
+                '轨道游走', '轨道炮', '轨道加特林', '激光笔', '重装机枪', '电狗',
+                '毒狗', '火狗', '实弹狗'
+            ],
+            medium: [
+                '机炮装甲', '火箭炮装甲', '小加特林炮台', '大加特林炮台', '火箭炮台',
+                '哨戒炮台', '盟友', '磁轨炮', '毒矛', '反器材步枪', '纪元', '榴弹发射器',
+                '电榴弹', '120', '380', '类星体', '飞矛', '次抛', '单兵导弹', '传送背包',
+                '悬浮背包', '喷射背包', '哨戒迫击炮', '毒气地雷', '110'
+            ],
+            low: [
+                '轨道电磁', '除叶工具', '超级地球国旗', '重机枪部署支架', '防护罩生成器',
+                '防卫墙', 'at炮台', '补包', '地狱火', '无后座', '轨道激光', '500',
+                '飞鹰机枪', '飞鹰空袭', '飞鹰烟', '轨道火', '轨道烟', '防护罩包',
+                '定向护盾', '防弹护盾背包', '电磁迫击炮', '反坦克地雷'
+            ]
+        };
+
+        // 3. 互斥组定义
         const exclusiveGroups = [
-            // 第一组：武器类互斥
             ['除叶工具', '超级地球国旗', '机枪', '盟友', '重机枪', '磁轨炮', '毒矛', '反器材步枪', '纪元', '榴弹发射器', '电榴弹', '灭菌器', '喷火器', '激光笔', '类星体', '电弧发射器', '飞矛', '无后座', '空爆', '重装机枪'],
-            // 第二组：道具/宠物类互斥
             ['补包', '地狱火', '传送背包', '悬浮背包', '喷射背包', '防护罩包', '定向护盾', '防弹护盾背包', '电狗', '毒狗', '火狗', '实弹狗', '激光狗'],
-            // 第三组：装甲类互斥
             ['机炮装甲', '火箭炮装甲'],
-            // 第四组：道具+武器子类互斥
             ['飞矛', '无后座', '空爆', '重装机枪', '补包', '地狱火', '传送背包', '悬浮背包', '喷射背包', '防护罩包', '定向护盾', '防弹护盾背包', '电狗', '毒狗', '火狗', '实弹狗', '激光狗']
         ];
 
-        // 页面加载初始化
-        window.onload = function() {
-            updateCount();
-        };
+        // 4. 低优先级特殊排除列表（触发数量限制的例外）
+        const lowPriorityExceptions = [
+            '补包', '地狱火', '无后座', '轨道激光', '500', '飞鹰机枪', '飞鹰空袭', '飞鹰烟', '轨道火'
+        ];
 
-        // 核心功能：生成随机战备（修复互斥逻辑）
+        // 辅助函数：获取战备的优先级权重
+        function getPriorityWeight(readiness) {
+            if (priorityWeights.high.includes(readiness)) return 3;
+            if (priorityWeights.medium.includes(readiness)) return 2;
+            return 1; // 低优先级
+        }
+
+        // 辅助函数：获取战备的颜色分类
+        function getReadinessColor(readiness) {
+            if (readinessCategories.red.includes(readiness)) return 'red';
+            if (readinessCategories.blue.includes(readiness)) return 'blue';
+            return 'green';
+        }
+
+        // 辅助函数：创建带权重的战备池（提高高优先级选中概率）
+        function createWeightedPool() {
+            let weightedPool = [];
+            // 合并所有战备
+            const allReadiness = [
+                ...readinessCategories.red,
+                ...readinessCategories.blue,
+                ...readinessCategories.green
+            ];
+            // 按权重添加（高优先级加3次，中加2次，低加1次）
+            allReadiness.forEach(item => {
+                const weight = getPriorityWeight(item);
+                for (let i = 0; i < weight; i++) {
+                    weightedPool.push(item);
+                }
+            });
+            return weightedPool;
+        }
+
+        // 辅助函数：检查是否违反互斥规则
+        function isConflict(candidate, selectedList) {
+            for (let group of exclusiveGroups) {
+                if (group.includes(candidate)) {
+                    const hasConflict = selectedList.some(item => group.includes(item) && item !== candidate);
+                    if (hasConflict) return true;
+                }
+            }
+            return false;
+        }
+
+        // 核心功能：生成随机战备（包含所有规则）
         function generateReadiness() {
             let selectedReadiness = [];
-            let tempPool = [...readinessPool]; // 临时战备池
+            // 创建带权重的基础池
+            let weightedPool = createWeightedPool();
+            // 去重的全战备列表（用于兜底）
+            const allUniqueReadiness = [...new Set(weightedPool)];
 
-            // 循环选4个不违反互斥规则的战备
-            while (selectedReadiness.length < 4 && tempPool.length > 0) {
-                // 随机选一个战备
-                const randomIndex = Math.floor(Math.random() * tempPool.length);
-                const candidate = tempPool[randomIndex];
-
-                // 检查：候选战备是否与已选的违反互斥规则
-                let isConflict = false;
-                for (let group of exclusiveGroups) {
-                    // 如果候选在当前互斥组，且已选列表中已有该组的其他战备 → 冲突
-                    if (group.includes(candidate)) {
-                        const hasExclusiveInSelected = selectedReadiness.some(item => group.includes(item) && item !== candidate);
-                        if (hasExclusiveInSelected) {
-                            isConflict = true;
-                            break;
-                        }
-                    }
-                }
-
-                // 无冲突则加入结果，有冲突则从临时池移除（不再选）
-                if (!isConflict) {
+            // 第一步：先选前2个战备（无数量限制）
+            while (selectedReadiness.length < 2 && weightedPool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * weightedPool.length);
+                const candidate = weightedPool[randomIndex];
+                
+                // 检查互斥
+                if (!isConflict(candidate, selectedReadiness) && !selectedReadiness.includes(candidate)) {
                     selectedReadiness.push(candidate);
                 }
-                tempPool.splice(randomIndex, 1); // 移除已检查的候选，避免重复选
+                // 移除已检查的候选，避免重复
+                weightedPool.splice(randomIndex, 1);
             }
 
-            // 兜底：如果临时池空了还没选够4个（极端情况），补全剩余数量
+            // 第二步：统计前2个中的低优先级数量（排除例外项）
+            const lowPriorityCount = selectedReadiness.filter(item => {
+                return priorityWeights.low.includes(item) && !lowPriorityExceptions.includes(item);
+            }).length;
+
+            // 第三步：生成后2个战备（根据低优先级数量限制）
+            let remainingCount = 4 - selectedReadiness.length;
+            while (remainingCount > 0 && weightedPool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * weightedPool.length);
+                const candidate = weightedPool[randomIndex];
+                
+                // 规则：如果前2个低优先级超2个 → 后2个只能从中高优先级选
+                const isForbiddenLow = lowPriorityCount > 2 && priorityWeights.low.includes(candidate);
+                
+                // 检查条件：无互斥 + 未选中 + 不违反低优先级限制
+                if (!isConflict(candidate, selectedReadiness) && 
+                    !selectedReadiness.includes(candidate) && 
+                    !isForbiddenLow) {
+                    selectedReadiness.push(candidate);
+                    remainingCount--;
+                }
+                weightedPool.splice(randomIndex, 1);
+            }
+
+            // 兜底：如果没选够4个，从全列表补全（保证数量）
             if (selectedReadiness.length < 4) {
                 const remaining = 4 - selectedReadiness.length;
-                const restPool = [...readinessPool].filter(item => !selectedReadiness.includes(item));
-                selectedReadiness = selectedReadiness.concat(restPool.slice(0, remaining));
+                const available = allUniqueReadiness.filter(item => {
+                    return !selectedReadiness.includes(item) && !isConflict(item, selectedReadiness);
+                });
+                selectedReadiness = selectedReadiness.concat(available.slice(0, remaining));
             }
 
-            // 渲染战备到页面
+            // 渲染战备到页面（带颜色分类）
             const readinessList = document.getElementById('readinessList');
             readinessList.innerHTML = '';
             selectedReadiness.forEach(readiness => {
+                const color = getReadinessColor(readiness);
                 const item = document.createElement('div');
-                item.className = 'readiness-item';
+                item.className = `readiness-item ${color}`;
                 item.textContent = readiness;
                 readinessList.appendChild(item);
             });
@@ -243,6 +278,11 @@
         function updateCount() {
             document.getElementById('generateCount').textContent = generateCount;
         }
+
+        // 页面加载初始化
+        window.onload = function() {
+            updateCount();
+        };
     </script>
 </body>
 </html>
